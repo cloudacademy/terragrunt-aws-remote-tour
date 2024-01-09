@@ -1,0 +1,69 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Keeping Terraform Remote State DRY with Terragrunt",
+  "steps": [
+    {
+      "directory": "",
+      "description": "This lab will focus on the **terragrunt.hcl** configuration file. The first Terragrunt configuration file is at the root-level directory.\n\nThe **dev** and **prod** directories contain **terragrunt.hcl** files, which will be reviewed later in this lab.\n\nFirst, you will configure the root directory configuration file to define how Terraform state will be managed, and where it will be stored.",
+      "title": "Intro"
+    },
+    {
+      "file": "terragrunt.hcl",
+      "description": "Click **Insert Code** to paste in the following remote state configuration:\n\n```js\nremote_state {\n  backend = \"s3\"\n  config = {\n    bucket         = \"ca-tf-state--${get_aws_account_id()}\"\n    key            = \"${path_relative_to_include()}/terraform.tfstate\"\n    region         = \"us-west-2\"\n    encrypt        = true\n    dynamodb_table = \"terraform-state-lock\"\n  }\n}\n\n```",
+      "line": 21,
+      "title": "Remote State"
+    },
+    {
+      "file": "terragrunt.hcl",
+      "description": "The `remote_state` block contains the remote state configuration settings for storing the Terraform state in an S3 bucket with a DynamoDB table for state locking. \n\nThe bucket argument value contains `${get_aws_account_id()}` which is a Terragrunt built-in function. This allows a unique identifier to be created based on the AWS account. The S3 bucket name always needs to be publicly unique, so this function call appends a unique value to the end of the `ca-tf-state-` string. \n\nThe value of the `key` argument contains `${path_relative_to_include()}` which is another Terragrunt built-in function. This function includes the relative folder path where the Terraform configuration is located. In this example, the folders are **dev** and **prod**.  The `${path_relative_to_include()}` function allows the key path to be automated for each directory.",
+      "line": 1,
+      "title": "Description"
+    },
+    {
+      "directory": "dev",
+      "description": "Each directory represents a separate environment **dev** and **prod**. Each `main.tf` file contains the configuration for deploying a VPC in the environment. Each `terragrunt.hcl` file contains the configuration for Terragrunt and is required to use the wrapper tool. ",
+      "title": "Sub Directories"
+    },
+    {
+      "file": "dev/main.tf",
+      "description": "Each `main.tf` file in the child folders contains an empty S3 backend block. This makes the remote state configuration much easier to maintain since all the configuration settings are maintained in a single file at the root of the directory.",
+      "line": 8,
+      "title": "main.tf"
+    },
+    {
+      "file": "dev/terragrunt.hcl",
+      "description": "In each **terragrunt.hcl** file, the `include` block tells Terragrunt to use the configuration from the directory specified in the path argument.\n\nIn this case, the `path` argument contains the value of another Terragrunt built-in function, `find_in_parent_folders()`.\n\nThis function tells Terragrunt to use the `terragrunt.hcl` file in the parent directory. So Terragrunt will use the remote state configuration settings from the `terragrunt.hcl` in the parent directory as if it were copied and pasted into the current directory in the **dev** and **prod** folders",
+      "line": 4,
+      "title": "terragrunt.hcl"
+    },
+    {
+      "directory": "",
+      "description": "Click the following command to run the `terragrunt init` command in a terminal window:\n\n>> terragrunt init\n\nTerragrunt will determine that the remote backend infrastructure does not exist then it will ask if you would like to create them.\n\nEnter **y** to create the backend resources.",
+      "title": "Init"
+    },
+    {
+      "directory": "",
+      "description": "Terragrunt will create the S3 bucket and DynamoDB table in the current AWS account and configure them using best practices. \n\nOnce the S3 backend has been created, you will notice a message regarding no Terraform configurations in the current directory. This can be safely ignored as you only intend to use Terraform configuration files stored in the child directories.",
+      "title": "Description"
+    },
+    {
+      "directory": "",
+      "description": "Run the following command to apply the Terragrunt configuration in all child folders.\n\n>> terragrunt apply-all\n\nEnter **y** when prompted.\n\nTerragrunt will only apply the Terraform configurations in child directories that contain a **terragrunt.hcl** file. ",
+      "title": "Apply"
+    },
+    {
+      "directory": "",
+      "description": "The command is running the `terraform init` and `terraform apply` commands for each environment. \n\nAfter the init and apply commands have succeeded, you will notice the backend-config parameter is used and the key path contains the folder name of each environment. This allows for each environment to have unique key paths for the backend configuration. For example, **dev/terraform.tfstate**.\n\nThe VPCs for each environment have been deployed successfully."
+    },
+    {
+      "directory": "",
+      "description": "To destroy all resources in each environment, run the following command:\n\n>> terragrunt destroy-all\n\nAfter a few moments, the EC2 instances are destroyed in the **dev** and **prod** environments.\n\n*Note*: The `terragrunt destroy-all` command should be used with caution. It should not be used against production environments and is more suited to ephemeral test environments. ",
+      "title": "Destroy"
+    },
+    {
+      "directory": "",
+      "description": "You've successfully deployed an Amazon VPC into multiple AWS environments using Terragrunt.\n\nReturn to the Cloud Academy Lab browser tab and run the validation check associated with this lab step.",
+      "title": "Complete"
+    }
+  ]
+}
